@@ -9,112 +9,141 @@ var MDBuilder = function(){
         inputs = input.split(/\r?\n/)
         pointer = 0
 
-        var output = "";
         var buf = new HtmlBuffer()
 
         while(true){
             var str = NextLine()
             if(str==null){
-                output += buf.pop()
                 break;
             }
             //区切り
             if(str.length==0){
-                output += buf.pop()
+                buf.popAll()
                 continue;
             }
-            //表題
+            //見出し
             if(paser_h.test(str)){
-                output += buf.pop()
-                buf.add(paser_h.text(str), paser_h.tag(str))
-                output += buf.pop()
+                buf.popAll()
+                buf.push(paser_h.tag(str), paser_h.text(str))
+                buf.popAll()
                 continue;
             }
             //水平線
             if(paser_hr.test(str)){
-                output += buf.pop();
-                output += paser_hr.tag(str);
+                buf.popAll();
+                buf.add("<hr />");
                 continue;
             }
             //リスト
             if(paser_olul.test(str)){
-                output += buf.pop();
-                Back();
-                output += ReadListBlock();
+                var isblock = buf.currentTag() == "li";
+                var indent = paser_olul.indent(str);
+                var oldindent = isblock ? paser_olul.indent(PeekPrevLine()) : -1;
+                if(indent-oldindent > 1){
+                    //noproc
+                }else{
+                    if(!isblock) buf.popAll();
+                    
+                    var tag = paser_olul.tag(str);
+                    var txt = paser_olul.text(str);
+                    if(oldindent < indent){
+                        buf.push(tag);
+                        buf.push("li", txt);
+                    }else if(oldindent > indent){
+                        buf.pop();
+                        for(var i=0;i<oldindent-indent;i++){ buf.pop(); }
+                        buf.push("li", txt);
+                    }else{
+                        buf.pop();
+                        buf.push("li", txt);
+                    }
+                    continue;
+                }
+            }
+            //テーブル（開始）
+            if(paser_table.test(str, PeekNextLine())){
+                buf.popAll();
+                buf.push("table");
+                buf.push("thead");
+                buf.push("tr");
+                paser_table.texts(str).forEach(x => {
+                    buf.push("th", x.trim())
+                    buf.pop();
+                });
+                buf.pop();
+                buf.pop();
+                buf.push("tbody");
+                NextLine(); //--分
                 continue;
             }
-            //テーブル
-            if(paser_table.test(str, Peek())){
-                output += buf.pop();
-                Back();
-                output += ReadTableBlock();
+            //テーブル（レコード）
+            if(buf.currentTag()=="tbody" && paser_table.test1(str)){
+                buf.push("tr");
+                paser_table.texts(str).forEach(x => {
+                    buf.push("td", x.trim())
+                    buf.pop();
+                });
+                buf.pop()
+                continue;
+            }
+            //pre
+            if(paser_pre.test(str)){
+                if(buf.currentTag() == "pre"){
+                    buf.add("\n");
+                    buf.add(paser_pre.text(str));
+                }else{
+                    buf.popAll();
+                    buf.push("pre", paser_pre.text(str));
+                }
+                continue;
+            }
+            //引用
+            if(paser_blockquote.test(str)){
+                var isblock = buf.currentTag() == "blockquote";
+                var indent = paser_blockquote.indent(str);
+                
+                if(!isblock){
+                    buf.popAll();
+                    buf.push("blockquote");
+                }else{
+                    buf.add("<br />");
+                }
+                for(var i=0; i<indent; i++){
+                    var cls = "class='blockquote_lv" + (i+1) + "'";
+                    buf.push("span","", cls);
+                }
+                buf.add(paser_blockquote.text(str));
+                for(var i=0; i<indent; i++){
+                    buf.pop();
+                }
+                continue;
+            }
+            //コード
+            if(paser_code.test(str)){
+                buf.popAll();
+                buf.push("pre", ""
+                    , "class='codeblock code_" + paser_code.type(str) + "'");
+                var i=0;
+                while(true){
+                    str = NextLine();
+                    if(str==null || paser_code.test(str)) break;
+                    if(i>0) buf.add("\n");
+                    buf.add(str);
+                    i++;
+                }
                 continue;
             }
 
+            //一部タグの終了判定
+            if(buf.currentTag() == "tbody"
+            || buf.currentTag() == "li"
+            || buf.currentTag() == "blockquote") buf.popAll();
+            
             //通常文書
-            buf.add(str);
-            if(str.endsWith("  ")) buf.add("<br />")
+            if(buf.currentTag() == "") buf.push("p", str);
+            else buf.add(str);
         }
-        return output;
-    }
-
-    //ol,ulブロックを読み進める
-    function ReadListBlock(){
-        var str = NextLine();
-        var tag = paser_olul.tag(str);
-        var ind = paser_olul.indent(str);
-
-        var ret = "<" + tag +">";
-        var buf = new HtmlBuffer()
-
-        buf.add(paser_olul.text(str),"li");
-        while(true){
-            str = Peek()
-            if(str == null) break;
-            if(str.length == 0) break;
-            if(!paser_olul.test(str)) break;
-
-            var nextInd = paser_olul.indent(str);
-            if(ind > nextInd){
-                break;
-            }else if(ind < nextInd){
-                buf.add(ReadListBlock());
-            }else{
-                ret += buf.pop();
-                buf.add(paser_olul.text(NextLine()), "li")
-            }
-        }
-        ret += buf.html();
-        ret += "</" + tag + ">";
-        return ret 
-    }
-
-    //テーブルブロックを読み進める
-    function ReadTableBlock(){
-        var str = NextLine();
-        var row = paser_table.texts(str);
-        var colMax = row.length;
-
-        function mkTd(str){
-            return "<td>" + str + "</td>";
-        }
-
-        //ヘッダ
-        var ret = "<table><thead><tr>"
-        row.forEach(x => { ret += "<th>" + x.trim() + "</th>"});
-        ret += "</tr></thead><tbody>"
-        NextLine();　//---分
-        //レコード
-        while(true){
-            str = Peek();
-            if(str == null || !paser_table.test1(str)) break;
-            paser_table.texts(NextLine()).forEach(x => {
-                ret += "<td>" + x.trim() + "</td>";
-            });
-            ret+="</tr>"
-        }
-        ret += "</tbody></table>"
-        return ret;
+        return buf.output();
     }
 
     function NextLine(){
@@ -123,10 +152,15 @@ var MDBuilder = function(){
         pointer++
         return s
     }
+    function PeekPrevLine(){
+        var p = pointer-2
+        if(p<0) return null
+        return inputs[p]
+    }
     function Back(){
         if(pointer>0) pointer--;
     }
-    function Peek(){
+    function PeekNextLine(){
         if(inputs.length <= pointer) return null
         return inputs[pointer]
     }
@@ -170,12 +204,8 @@ var MDBuilder = function(){
     }
     var paser_hr = new function(){
         var regex = /^\s*((- *){3,}|(\* *){3,})\s*$/
-
         this.test = function(str){
             return regex.test(str);
-        }
-        this.tag = function(str){
-            return "<hr />";
         }
     }
     var paser_table = new function(){
@@ -196,38 +226,90 @@ var MDBuilder = function(){
             return spl.slice(1, spl.length-1);
         }
     }
+    var paser_pre = new function(){
+        var regex=/^( {4,}|\t)/
+        this.test = function(str){
+            return regex.test(str);
+        }
+        this.tag = function(str){
+            return "pre";
+        }
+        this.text = function(str){
+            return str.replace(regex,"");
+        }
+    }
+    var paser_blockquote = new function(){
+        var regex = /^\s*(>+) */
+        this.test = function(str){
+            return regex.test(str);
+        }
+        this.indent = function(str){
+            return regex.exec(str)[1].length;
+        }
+        this.text = function(str){
+            return str.replace(regex,"");
+        }
+    }
+    var paser_code = new function(){
+        var regex = /^\s*'{3,}\s*/
+        this.test = function(str){
+            return regex.test(str);
+        }
+        this.type = function(str){
+            return str.replace(regex,"");
+        }
+    }
 
     //----------------------------------------
     //バッファオブジェクト
     var HtmlBuffer = function(){
         var me = this
-        this.buf = ""
-        this.tag = ""
-        this.attr = ""
+        this.p = 0;
+        this.tag = [""]
+        this.buf = [""]
+        this.attr = [""]
 
-        this.clear = function(){
-            me.buf = ""
-            me.tag = ""
-            me.attr = ""
+        this.isEmpty = function(){
+            return me.buf=="" && me.tag==""
         }
-        this.add = function(str, tag){
-            me.buf += str.trim();
-            if(tag != undefined){
-                me.tag = tag
-            }else if(me.tag == ""){
-                me.tag = "p"
+        this.push = function(tag, str, attr){
+            if(me.tag.length <= me.p){
+                me.tag.push(null);
+                me.buf.push(null);
+                me.attr.push(null);
             }
+            me.p++;
+            me.tag[me.p]=tag;
+            me.buf[me.p]=(str==undefined?"":str);
+            me.attr[me.p]=(attr==undefined?"":attr);
         }
-        this.html = function(){
-            if(me.tag=="" || me.buf=="") return "";
-            var ret = "<" + me.tag + " " + me.attr + ">"
-                + me.buf + "</" + me.tag + ">";
-            return ret;
+        this.add = function(str){
+            me.buf[me.p] += str;
         }
         this.pop = function(){
-            var ret = me.html()
-            me.clear()
+            if(me.p<=0) return;
+            var ret = me.html(me.tag[me.p], me.buf[me.p], me.attr[me.p]);
+            me.tag[me.p] = null;
+            me.buf[me.p] = null;
+            me.attr[me.p] = null;
+            me.p--;
+            me.buf[me.p] += ret;
+        }
+        this.popAll = function(){
+            while(me.p>0) me.pop();
+        }
+        this.output = function(){
+            me.popAll();
+            return me.buf[0];
+        }
+        this.html = function(tag, text, attr){
+            var ret = "<" + tag + " " + attr + ">"
+                + text + "</" + tag + ">";
             return ret;
+        }
+        this.currentTag =function(){
+            if(me.p<1) return "";
+            return me.tag[me.p];
         }
     }
 }
