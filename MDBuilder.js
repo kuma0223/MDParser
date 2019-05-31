@@ -31,7 +31,7 @@ var MDBuilder = function(){
             //水平線
             if(paser_hr.test(str)){
                 buf.popAll();
-                buf.add("<hr />");
+                buf.addNoEscape("<hr />");
                 continue;
             }
             //リスト
@@ -51,7 +51,7 @@ var MDBuilder = function(){
                         buf.push("li", txt);
                     }else if(oldindent > indent){
                         buf.pop();
-                        for(var i=0;i<oldindent-indent;i++){ buf.pop(); }
+                        for(var i=0;i<oldindent-indent;i++){ buf.pop(); buf.pop(); }
                         buf.push("li", txt);
                     }else{
                         buf.pop();
@@ -66,7 +66,7 @@ var MDBuilder = function(){
                 buf.push("table");
                 buf.push("thead");
                 buf.push("tr");
-                paser_table.texts(str).forEach(x => {
+                paser_table.texts(str).forEach(function(x){
                     buf.push("th", x.trim())
                     buf.pop();
                 });
@@ -79,7 +79,7 @@ var MDBuilder = function(){
             //テーブル（レコード）
             if(buf.currentTag()=="tbody" && paser_table.test1(str)){
                 buf.push("tr");
-                paser_table.texts(str).forEach(x => {
+                paser_table.texts(str).forEach(function(x){
                     buf.push("td", x.trim())
                     buf.pop();
                 });
@@ -106,11 +106,10 @@ var MDBuilder = function(){
                     buf.popAll();
                     buf.push("blockquote");
                 }else{
-                    buf.add("<br />");
+                    buf.addNoEscape("<br />");
                 }
                 for(var i=0; i<indent; i++){
-                    var cls = "class='blockquote_lv" + (i+1) + "'";
-                    buf.push("span","", cls);
+                    buf.push("span","", "class='blockquoteNest'");
                 }
                 buf.add(paser_blockquote.text(str));
                 for(var i=0; i<indent; i++){
@@ -142,6 +141,8 @@ var MDBuilder = function(){
             //通常文書
             if(buf.currentTag() == "") buf.push("p", str);
             else buf.add(str);
+
+            if(/  $/.test(str)) buf.addNoEscape("<br />")
         }
         return buf.output();
     }
@@ -280,10 +281,13 @@ var MDBuilder = function(){
             }
             me.p++;
             me.tag[me.p]=tag;
-            me.buf[me.p]=(str==undefined?"":str);
-            me.attr[me.p]=(attr==undefined?"":attr);
+            me.buf[me.p]=(str==undefined ? "" : me.escape(str));
+            me.attr[me.p]=(attr==undefined ? "" : attr);
         }
         this.add = function(str){
+            me.buf[me.p] += me.escape(str);
+        }
+        this.addNoEscape = function(str){
             me.buf[me.p] += str;
         }
         this.pop = function(){
@@ -310,6 +314,14 @@ var MDBuilder = function(){
         this.currentTag =function(){
             if(me.p<1) return "";
             return me.tag[me.p];
+        }
+        this.escape = function(str){
+            str = str.replace(">", "&gt;")
+            str = str.replace("<", "&lt;")
+            str = str.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+            str = str.replace(/\*(.+?)\*/g, "<em>$1</em>")
+            str = str.replace(/`(.+?)`/g, "<span class='inlinecode'>$1</span>")
+            return str;
         }
     }
 }

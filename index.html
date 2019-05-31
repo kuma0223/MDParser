@@ -1,105 +1,28 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta charset="UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script src="MDBuilder.js" type="text/javascript"></script>
+<script type="text/javascript">
+window.onload=function(){document.body.innerHTML=new MDBuilder().BuildHtml(document.getElementById('Markdown').textContent)}
+</script>
+<script type="text/plain" id="Markdown">
 
-    <style type="text/css">
-        *{
-            box-sizing: border-box;
-            margin: 0; padding: 0;
-        }
-        html{
-            color:#202020;
-            font-size: 14px;
-            font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', 'meiryo', sans-serif;
-        }
-        body{
-            background-color: whitesmoke;
-        }
-        h1{
-            margin: 10px;
-            padding: 3px 0px 3px 5px;
-            color: white;
-            font-size: 24px;
-            font-weight: normal;
-            border-left: 5px solid rgb(3, 51, 78);
-            background: rgb(85, 140, 173);
-        }
-        h2{
-            margin: 10px;
-            font-size: 20px;
-            font-weight: normal;
-            border-bottom: 1px solid rgb(85, 140, 173);
-        }
-        h3{
-            margin: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        p{
-            margin: 10px;
-        }
-        hr{
-            margin: 10px;
-        }
-        ul, ol{
-            margin: 10px 30px;
-        }
-        li ol, li ul{
-            margin: 0px 30px;
-        }
-        table{
-            margin: 10px;
-            border-collapse: collapse;
-        }
-        td,th{
-            padding: 3px 10px;
-            border: 1px solid lightgray;
-        }
-        th{
-            color: white;
-            background: dimgray;
-        }
-        tr:nth-child(2n){
-            background: rgb(235, 235, 235);
-        }
-        pre{
-            margin: 10px;
-            background: gainsboro;
-            padding: 5px;
-        }
-        blockquote{
-            margin: 10px;
-            background: gainsboro;
-            padding: 5px;
-        }
-        .blockquote_lv1,.blockquote_lv2{
-            padding-left: 5px;
-            border-left: 5px solid darkcyan;
-        }
-    </style>
-
-    <script src="MDBuilder.js" type="text/javascript"></script>
-</head>
-
-<body>
-    <div id="ContentBox">
-    </div>
-
-    <div id="Markdown" style="display:none">
 # 表題１
 ## 表題２
 ### 表題3
 
-javascriptでマークダウンパーサを作成してみました。マニュアルなどを気軽に記述できないかな。
+javascriptでマークダウンパーサを作成してみました。マニュアルなどを気軽に記述できないかな。  
 これはサンプルです。
+
+ここは通常の文章です。
 
 1. オーダーリスト
 1. オーダーリスト
     - リスト
         - リスト
-        - リスト
+            - リスト
     - リスト
 
 ---
@@ -109,26 +32,27 @@ javascriptでマークダウンパーサを作成してみました。マニュ�
 | abc | defg|
 | bcderf|  aaa|
 
-    pre文書
-    pre文書
+    スペース4つで<pre>文書になります。
+	タブ一つでもOK
 
-> 引用
->> 二重引用
+> >は引用です。
+> ここも引用です。
+>> >>とすると二重引用です。
+>> 何重でもできます。
 
 '''c
+//コードブロックです。色分けはありません。
 int a = 0;
-int b =   a+1
+int b = a+1
 ''''
-    </div>
 
-    <script type="text/javascript">
-        document.onload = new function(){
-            var builder = new MDBuilder();
-            var text = document.getElementById("Markdown").textContent;
-            var html = builder.BuildHtml(text);
+インラインコード表記はバッククォートで`int a=0;`囲みます。
 
-            document.getElementById("ContentBox").innerHTML = html;
-        }
-    </script>
-</body>
+ここは*アクセント*です  
+ここは**強調**です  
+ここは***アクセント+強調***です
+
+</script>
+</head>
+<body></body>
 </html>
