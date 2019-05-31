@@ -1,12 +1,4 @@
-﻿<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8" />
-<link rel="stylesheet" type="text/css" href="style.css" />
-<script src="MDBuilder.js" type="text/javascript"></script>
-<script type="text/javascript">
-window.onload=function(){document.body.innerHTML=new MDBuilder().BuildHtml(document.getElementById('Markdown').textContent)}
-</script>
+﻿<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8" /></head><body>
 <script type="text/plain" id="Markdown">
 # 表題１
 ## 表題２
@@ -60,6 +52,6 @@ int b = a+1;
 ![画像表示のサンプル](./icon.png)
 
 </script>
-</head>
-<body></body>
-</html>
+<script type="text/javascript">
+    if(parent) parent.postMessage(document.getElementById("Markdown").textContent , "*");
+</script></body></html>

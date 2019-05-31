@@ -1,0 +1,88 @@
+
+*{
+    box-sizing: border-box;
+    margin: 0; padding: 0;
+}
+html{
+    color:#202020;
+    font-size: 14px;
+    font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', 'meiryo', sans-serif;
+}
+body{
+    background-color: whitesmoke;
+}
+h1{
+    margin: 14px 4px;
+    padding: 4px 8px;
+    color: white;
+    font-size: 24px;
+    font-weight: normal;
+    border-left: 10px solid rgb(3, 51, 78);
+    background: rgb(85, 140, 173);
+}
+h2{
+    margin: 14px;
+    font-size: 20px;
+    font-weight: normal;
+    border-bottom: 2px solid rgb(85, 140, 173);
+}
+h3{
+    margin: 14px;
+    font-size: 18px;
+    font-weight: bold;
+}
+p{
+    margin: 14px;
+}
+hr{
+    margin: 14px;
+}
+ul, ol{
+    margin: 14px 30px;
+}
+li ol, li ul{
+    margin: 0px 30px;
+}
+table{
+    margin: 14px;
+    border-collapse: collapse;
+}
+td,th{
+    padding: 3px 10px;
+    border: 1px solid lightgray;
+}
+th{
+    color: white;
+    background: dimgray;
+}
+tr:nth-child(2n){
+    background: rgb(235, 235, 235);
+}
+pre{
+    margin: 14px;
+    background: rgb(235, 235, 235);
+    padding: 5px;
+}
+.codeblock{
+    color: whitesmoke;
+    background: #2e2930;
+}
+.inlinecode{
+    background: gainsboro;
+    padding: 0 5px;
+    margin: 0 3px;
+}
+blockquote{
+    margin: 14px;
+}
+.blockquoteNest{
+    padding-left: 5px;
+    border-left: 4px solid #7ebeab;
+}
+em{
+    font-style: oblique;
+}
+strong{
+    font-weight: bold;
+    color: crimson;
+}
