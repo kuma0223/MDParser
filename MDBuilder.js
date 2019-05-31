@@ -1,4 +1,10 @@
 var MDBuilder = function(){
+    //改行コード
+    this.NewLine = "\n";
+    //イメージパスのルート指定
+    this.ImageRoot = "";
+
+    var MDBuilderObject = this;
     var me = this;
     var input = ""
     var inputs
@@ -31,7 +37,7 @@ var MDBuilder = function(){
             //水平線
             if(paser_hr.test(str)){
                 buf.popAll();
-                buf.addNoEscape("<hr />");
+                buf.add("<hr />", true, true);
                 continue;
             }
             //リスト
@@ -60,41 +66,50 @@ var MDBuilder = function(){
                     continue;
                 }
             }
-            //テーブル（開始）
+            //テーブル
             if(paser_table.test(str, PeekNextLine())){
+                //先に--部解析
+                var aligns = [];
+                paser_table.texts(NextLine()).forEach(function(x) {
+                    aligns.push(paser_table.align(x));
+                });
+                //ヘッダ部
                 buf.popAll();
                 buf.push("table");
                 buf.push("thead");
                 buf.push("tr");
-                paser_table.texts(str).forEach(function(x){
-                    buf.push("th", x.trim())
+                paser_table.texts(str).forEach(function(x,i){
+                    var style = "style='text-align:" + aligns[i] + ";'"
+                    buf.push("th", x, style);
                     buf.pop();
                 });
                 buf.pop();
                 buf.pop();
+                //レコード部
                 buf.push("tbody");
-                NextLine(); //--分
-                continue;
-            }
-            //テーブル（レコード）
-            if(buf.currentTag()=="tbody" && paser_table.test1(str)){
-                buf.push("tr");
-                paser_table.texts(str).forEach(function(x){
-                    buf.push("td", x.trim())
-                    buf.pop();
-                });
-                buf.pop()
+                while(true){
+                    str = PeekNextLine();
+                    if(str==null || !paser_table.test(str)) break;
+                    buf.push("tr");
+                    paser_table.texts(NextLine()).forEach(function(x,i){
+                        if(i>aligns.length) return;
+                        var style = "style='text-align:" + aligns[i] + ";'"
+                        buf.push("td", x, style);
+                        buf.pop();
+                    });
+                    buf.pop()
+                }
                 continue;
             }
             //pre
             if(paser_pre.test(str)){
-                if(buf.currentTag() == "pre"){
-                    buf.add("\n");
-                    buf.add(paser_pre.text(str));
-                }else{
+                if(buf.currentTag() != "pre"){
                     buf.popAll();
-                    buf.push("pre", paser_pre.text(str));
+                    buf.push("pre", "");
+                }else{
+                    buf.add(me.NewLine);
                 }
+                buf.add(paser_pre.text(str), false, true);
                 continue;
             }
             //引用
@@ -106,7 +121,7 @@ var MDBuilder = function(){
                     buf.popAll();
                     buf.push("blockquote");
                 }else{
-                    buf.addNoEscape("<br />");
+                    buf.add("<br />", true, true);
                 }
                 for(var i=0; i<indent; i++){
                     buf.push("span","", "class='blockquoteNest'");
@@ -123,26 +138,27 @@ var MDBuilder = function(){
                 buf.push("pre", ""
                     , "class='codeblock code_" + paser_code.type(str) + "'");
                 var i=0;
+                //終了まで進める
                 while(true){
                     str = NextLine();
                     if(str==null || paser_code.test(str)) break;
-                    if(i>0) buf.add("\n");
-                    buf.add(str);
+                    if(i>0) buf.add(me.NewLine);
+                    buf.add(str, false, true);
                     i++;
                 }
                 continue;
             }
 
             //一部タグの終了判定
-            if(buf.currentTag() == "tbody"
-            || buf.currentTag() == "li"
+            if(buf.currentTag() == "li"
             || buf.currentTag() == "blockquote") buf.popAll();
             
             //通常文書
-            if(buf.currentTag() == "") buf.push("p", str);
-            else buf.add(str);
+            if(buf.currentTag()=="" && str.trim()!=""){
+                buf.push("p", str);
+            } else{ buf.add(str); }
 
-            if(/  $/.test(str)) buf.addNoEscape("<br />")
+            if(/  $/.test(str)) buf.add("<br />", true, true)
         }
         return buf.output();
     }
@@ -167,6 +183,91 @@ var MDBuilder = function(){
     }
 
     //----------------------------------------
+    //バッファオブジェクト
+    var HtmlBuffer = function(){
+        var me = this
+        this.p = 0;
+        this.tag = [""]
+        this.buf = [""]
+        this.attr = [""]
+
+        this.push = function(tag, str, attr){
+            if(me.tag.length <= me.p){
+                me.tag.push(null);
+                me.buf.push(null);
+                me.attr.push(null);
+            }
+            me.p++;
+            me.tag[me.p]=tag;
+            me.buf[me.p]=""
+            me.attr[me.p]=(attr==undefined ? "" : attr);
+            me.add(str);
+        }
+        this.add = function(str, noEscape, noReplace){
+            if(str===undefined || str===null || str=="") return;
+            if(!noEscape){
+                escapes.forEach(function(x){
+                    str = str.replace(x[0], x[1])
+                });
+            }
+            if(!noReplace){
+                replaces.forEach(function(x){
+                    str = str.replace(x[0], x[1])
+                });
+            }
+            me.buf[me.p] += str;
+        }
+        this.pop = function(){
+            if(me.p<=0) return;
+            var ret = me.html(me.tag[me.p], me.buf[me.p], me.attr[me.p]);
+            me.tag[me.p] = null;
+            me.buf[me.p] = null;
+            me.attr[me.p] = null;
+            me.p--;
+            me.buf[me.p] += ret;
+        }
+        this.popAll = function(){
+            while(me.p>0) me.pop();
+        }
+        this.output = function(){
+            me.popAll();
+            return me.buf[0];
+        }
+        this.html = function(tag, text, attr){
+            var ret = "<" + tag + " " + attr + ">"
+                + text + "</" + tag + ">";
+            return ret;
+        }
+        this.currentTag =function(){
+            if(me.p<1) return "";
+            return me.tag[me.p];
+        }
+        var escapes = [
+            [/\\\\/g, "&#92"],
+            [/\\\(/g, "&#40"],
+            [/\\\)/g, "&#41"],
+            [/\\\*/g, "&#42"],
+            [/\\\[/g, "&#91"],
+            [/\\\]/g, "&#93"],
+            [/\\_/g, "&#95"],
+            [/\\`/g, "&#96"],
+            [/\\~/g, "&#126"],
+            [/>/g, "&gt;"],
+            [/</g, "&lt;"],
+        ]
+        var replaces = [
+            [/\*{2}(.+?)\*{2}/g, "<strong>$1</strong>"],
+            [/ _{2}(.+?)_{2} /g, "<strong>$1</strong>"],
+            [/\*(.+?)\*/g, "<em>$1</em>"],
+            [/ _(.+?)_ /g, "<em>$1</em>"],
+            [/`(.+?)`/g, "<span class='inlinecode'>$1</span>"],
+            [/~~(.+?)~~/, "<del>$1</del>"],
+            [/!\[(.*?)\]\((.+?)\)/g, "<img src='" + MDBuilderObject.ImageRoot + "$2' alt='$1' />"],
+            [/\[(.+?)\]\((.+?)\)/g, "<a href='$2' target='_blank'>$1</a>"],
+        ]
+    }
+
+    //----------------------------------------
     //パーサ群
     var paser_h = new function(){
         var regex = /^#+ +/
@@ -183,8 +284,8 @@ var MDBuilder = function(){
         }
     }
     var paser_olul = new function(){
-        var regex = /^\s*([-*]|[1-9]\.) +/
-        var regexUl = /^\s*[-*] +/
+        var regex = /^\s*([-*+]|[1-9]\.) +/
+        var regexUl = /^\s*[-*+] +/
         var regexOl = /^\s*[1-9]\. +/
 
         this.test = function(str){
@@ -214,17 +315,26 @@ var MDBuilder = function(){
         var regex1 = /^\s*\|.*\|\s*$/
         var regex2 = /^\s*(\|\s*:?-+:?\s*)+\|\s*$/
 
-        this.test1 = function(str){
-            return regex1.test(str);
-        }
         this.test = function(str1, str2){
-            if(!regex1.test(str1)) return false;
-            if(!regex2.test(str2)) return false;
-            return me.texts(str1).length == me.texts(str2).length;
+            if(str2 == undefined){
+                return regex1.test(str1);
+            }else{
+                if(!regex1.test(str1)) return false;
+                if(!regex2.test(str2)) return false;
+                return me.texts(str1).length == me.texts(str2).length;
+            }
         }
         this.texts = function(str){
             var spl = str.split("|");
             return spl.slice(1, spl.length-1);
+        }
+        this.align = function(str){
+            var st = /:-+/.test(str);
+            var ed = /-+:/.test(str);
+            if(st && !ed) return "left";
+            if(!st && ed) return "right";
+            if(st && ed) return "center";
+            return "initial";
         }
     }
     var paser_pre = new function(){
@@ -252,76 +362,12 @@ var MDBuilder = function(){
         }
     }
     var paser_code = new function(){
-        var regex = /^\s*'{3,}\s*/
+        var regex = /^\s*`{3,}\s*/
         this.test = function(str){
             return regex.test(str);
         }
         this.type = function(str){
             return str.replace(regex,"");
-        }
-    }
-
-    //----------------------------------------
-    //バッファオブジェクト
-    var HtmlBuffer = function(){
-        var me = this
-        this.p = 0;
-        this.tag = [""]
-        this.buf = [""]
-        this.attr = [""]
-
-        this.isEmpty = function(){
-            return me.buf=="" && me.tag==""
-        }
-        this.push = function(tag, str, attr){
-            if(me.tag.length <= me.p){
-                me.tag.push(null);
-                me.buf.push(null);
-                me.attr.push(null);
-            }
-            me.p++;
-            me.tag[me.p]=tag;
-            me.buf[me.p]=(str==undefined ? "" : me.escape(str));
-            me.attr[me.p]=(attr==undefined ? "" : attr);
-        }
-        this.add = function(str){
-            me.buf[me.p] += me.escape(str);
-        }
-        this.addNoEscape = function(str){
-            me.buf[me.p] += str;
-        }
-        this.pop = function(){
-            if(me.p<=0) return;
-            var ret = me.html(me.tag[me.p], me.buf[me.p], me.attr[me.p]);
-            me.tag[me.p] = null;
-            me.buf[me.p] = null;
-            me.attr[me.p] = null;
-            me.p--;
-            me.buf[me.p] += ret;
-        }
-        this.popAll = function(){
-            while(me.p>0) me.pop();
-        }
-        this.output = function(){
-            me.popAll();
-            return me.buf[0];
-        }
-        this.html = function(tag, text, attr){
-            var ret = "<" + tag + " " + attr + ">"
-                + text + "</" + tag + ">";
-            return ret;
-        }
-        this.currentTag =function(){
-            if(me.p<1) return "";
-            return me.tag[me.p];
-        }
-        this.escape = function(str){
-            str = str.replace(">", "&gt;")
-            str = str.replace("<", "&lt;")
-            str = str.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            str = str.replace(/\*(.+?)\*/g, "<em>$1</em>")
-            str = str.replace(/`(.+?)`/g, "<span class='inlinecode'>$1</span>")
-            return str;
         }
     }
 }
