@@ -243,6 +243,7 @@ var MDParser = function(){
             return me.tag[me.p];
         }
         var escapes = [
+            [/&/g, "&amp;"],
             [/\\\\/g, "&#92"],
             [/\\\(/g, "&#40"],
             [/\\\)/g, "&#41"],
