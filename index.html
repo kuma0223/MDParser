@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <link rel="stylesheet" type="text/css" href="style.css" />
-<script src="MDBuilder.js" type="text/javascript"></script>
+<script src="MDParser.js" type="text/javascript"></script>
 <script type="text/javascript">
-window.onload=function(){document.body.innerHTML=new MDBuilder().BuildHtml(document.getElementById('Markdown').textContent)}
+window.onload=function(){document.body.innerHTML=new MDParser().BuildHtml(document.getElementById('Markdown').textContent)}
 </script>
 <script type="text/plain" id="Markdown">
 # 表題１
@@ -57,7 +57,7 @@ int b = a+1;
 リンクです[Google](http://google.com)。別窓(_blank)になります。
 
 画像表示です。  
-![画像表示のサンプル](./icon.png)
+![画像表示のサンプル](./sample/img/icon.png)
 
 </script>
 </head>

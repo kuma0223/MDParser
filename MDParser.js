@@ -1,10 +1,10 @@
-var MDBuilder = function(){
+var MDParser = function(){
     //改行コード
     this.NewLine = "\n";
     //イメージパスのルート指定
     this.ImageRoot = "";
 
-    var MDBuilderObject = this;
+    var MDParserObject = this;
     var me = this;
     var input = ""
     var inputs
@@ -15,7 +15,7 @@ var MDBuilder = function(){
         inputs = input.split(/\r?\n/)
         pointer = 0
 
-        var buf = new HtmlBuffer()
+        var buf = new HtmlBuilder()
 
         while(true){
             var str = NextLine()
@@ -28,30 +28,30 @@ var MDBuilder = function(){
                 continue;
             }
             //見出し
-            if(paser_h.test(str)){
+            if(parser_h.test(str)){
                 buf.popAll()
-                buf.push(paser_h.tag(str), paser_h.text(str))
+                buf.push(parser_h.tag(str), parser_h.text(str))
                 buf.popAll()
                 continue;
             }
             //水平線
-            if(paser_hr.test(str)){
+            if(parser_hr.test(str)){
                 buf.popAll();
                 buf.add("<hr />", true, true);
                 continue;
             }
             //リスト
-            if(paser_olul.test(str)){
+            if(parser_olul.test(str)){
                 var isblock = buf.currentTag() == "li";
-                var indent = paser_olul.indent(str);
-                var oldindent = isblock ? paser_olul.indent(PeekPrevLine()) : -1;
+                var indent = parser_olul.indent(str);
+                var oldindent = isblock ? parser_olul.indent(PeekPrevLine()) : -1;
                 if(indent-oldindent > 1){
                     //noproc
                 }else{
                     if(!isblock) buf.popAll();
                     
-                    var tag = paser_olul.tag(str);
-                    var txt = paser_olul.text(str);
+                    var tag = parser_olul.tag(str);
+                    var txt = parser_olul.text(str);
                     if(oldindent < indent){
                         buf.push(tag);
                         buf.push("li", txt);
@@ -67,18 +67,18 @@ var MDBuilder = function(){
                 }
             }
             //テーブル
-            if(paser_table.test(str, PeekNextLine())){
+            if(parser_table.test(str, PeekNextLine())){
                 //先に--部解析
                 var aligns = [];
-                paser_table.texts(NextLine()).forEach(function(x) {
-                    aligns.push(paser_table.align(x));
+                parser_table.texts(NextLine()).forEach(function(x) {
+                    aligns.push(parser_table.align(x));
                 });
                 //ヘッダ部
                 buf.popAll();
                 buf.push("table");
                 buf.push("thead");
                 buf.push("tr");
-                paser_table.texts(str).forEach(function(x,i){
+                parser_table.texts(str).forEach(function(x,i){
                     var style = "style='text-align:" + aligns[i] + ";'"
                     buf.push("th", x, style);
                     buf.pop();
@@ -89,9 +89,9 @@ var MDBuilder = function(){
                 buf.push("tbody");
                 while(true){
                     str = PeekNextLine();
-                    if(str==null || !paser_table.test(str)) break;
+                    if(str==null || !parser_table.test(str)) break;
                     buf.push("tr");
-                    paser_table.texts(NextLine()).forEach(function(x,i){
+                    parser_table.texts(NextLine()).forEach(function(x,i){
                         if(i>aligns.length) return;
                         var style = "style='text-align:" + aligns[i] + ";'"
                         buf.push("td", x, style);
@@ -102,20 +102,20 @@ var MDBuilder = function(){
                 continue;
             }
             //pre
-            if(paser_pre.test(str)){
+            if(parser_pre.test(str)){
                 if(buf.currentTag() != "pre"){
                     buf.popAll();
                     buf.push("pre", "");
                 }else{
                     buf.add(me.NewLine);
                 }
-                buf.add(paser_pre.text(str), false, true);
+                buf.add(parser_pre.text(str), false, true);
                 continue;
             }
             //引用
-            if(paser_blockquote.test(str)){
+            if(parser_blockquote.test(str)){
                 var isblock = buf.currentTag() == "blockquote";
-                var indent = paser_blockquote.indent(str);
+                var indent = parser_blockquote.indent(str);
                 
                 if(!isblock){
                     buf.popAll();
@@ -126,22 +126,22 @@ var MDBuilder = function(){
                 for(var i=0; i<indent; i++){
                     buf.push("span","", "class='blockquoteNest'");
                 }
-                buf.add(paser_blockquote.text(str));
+                buf.add(parser_blockquote.text(str));
                 for(var i=0; i<indent; i++){
                     buf.pop();
                 }
                 continue;
             }
             //コード
-            if(paser_code.test(str)){
+            if(parser_code.test(str)){
                 buf.popAll();
                 buf.push("pre", ""
-                    , "class='codeblock code_" + paser_code.type(str) + "'");
+                    , "class='codeblock code_" + parser_code.type(str) + "'");
                 var i=0;
                 //終了まで進める
                 while(true){
                     str = NextLine();
-                    if(str==null || paser_code.test(str)) break;
+                    if(str==null || parser_code.test(str)) break;
                     if(i>0) buf.add(me.NewLine);
                     buf.add(str, false, true);
                     i++;
@@ -183,8 +183,8 @@ var MDBuilder = function(){
     }
 
     //----------------------------------------
-    //バッファオブジェクト
-    var HtmlBuffer = function(){
+    //HTML構築オブジェクト
+    var HtmlBuilder = function(){
         var me = this
         this.p = 0;
         this.tag = [""]
@@ -262,14 +262,14 @@ var MDBuilder = function(){
             [/ _(.+?)_ /g, "<em>$1</em>"],
             [/`(.+?)`/g, "<span class='inlinecode'>$1</span>"],
             [/~~(.+?)~~/, "<del>$1</del>"],
-            [/!\[(.*?)\]\((.+?)\)/g, "<img src='" + MDBuilderObject.ImageRoot + "$2' alt='$1' />"],
+            [/!\[(.*?)\]\((.+?)\)/g, "<img src='" + MDParserObject.ImageRoot + "$2' alt='$1' />"],
             [/\[(.+?)\]\((.+?)\)/g, "<a href='$2' target='_blank'>$1</a>"],
         ]
     }
 
     //----------------------------------------
     //パーサ群
-    var paser_h = new function(){
+    var parser_h = new function(){
         var regex = /^#+ +/
 
         this.test = function(str){
@@ -283,7 +283,7 @@ var MDBuilder = function(){
             return str.replace(regex, "")
         }
     }
-    var paser_olul = new function(){
+    var parser_olul = new function(){
         var regex = /^\s*([-*+]|[1-9]\.) +/
         var regexUl = /^\s*[-*+] +/
         var regexOl = /^\s*[1-9]\. +/
@@ -304,13 +304,13 @@ var MDBuilder = function(){
             return Math.floor(indent.length / 4)
         }
     }
-    var paser_hr = new function(){
+    var parser_hr = new function(){
         var regex = /^\s*((- *){3,}|(\* *){3,})\s*$/
         this.test = function(str){
             return regex.test(str);
         }
     }
-    var paser_table = new function(){
+    var parser_table = new function(){
         var me = this
         var regex1 = /^\s*\|.*\|\s*$/
         var regex2 = /^\s*(\|\s*:?-+:?\s*)+\|\s*$/
@@ -337,7 +337,7 @@ var MDBuilder = function(){
             return "initial";
         }
     }
-    var paser_pre = new function(){
+    var parser_pre = new function(){
         var regex=/^( {4,}|\t)/
         this.test = function(str){
             return regex.test(str);
@@ -349,7 +349,7 @@ var MDBuilder = function(){
             return str.replace(regex,"");
         }
     }
-    var paser_blockquote = new function(){
+    var parser_blockquote = new function(){
         var regex = /^\s*(>+) */
         this.test = function(str){
             return regex.test(str);
@@ -361,7 +361,7 @@ var MDBuilder = function(){
             return str.replace(regex,"");
         }
     }
-    var paser_code = new function(){
+    var parser_code = new function(){
         var regex = /^\s*`{3,}\s*/
         this.test = function(str){
             return regex.test(str);
