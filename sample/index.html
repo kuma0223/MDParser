@@ -7,14 +7,19 @@
     <script src="../MDParser.js" type="text/javascript"></script>
     <link rel="stylesheet" type="text/css" href="../style.css" />
     <style>
+        *{
+            box-sizing: border-box;
+        }
         #SideMenu {
             padding: 10px 24px;
             width: 220px;
-            overflow: auto;
+            overflow: hidden;
             background-color: #44617b;
             color: whitesmoke;
             font-size: 16px;
             border-right: 3px solid #4496d3;
+            user-select: none;
+            -ms-user-select: none;
         }
 
             #SideMenu a {
@@ -24,29 +29,39 @@
             #SideMenu ul {
                 margin: 0 20px;
             }
-
+        #Slidebox{
+            transition: margin-top 0.3s ease-out;
+        }
+        #Slidebox.dragging{
+            pointer-events : none;
+            transition: none;
+        }
         #Content {
             flex-grow: 1;
             padding: 10px;
         }
     </style>
 </head>
-<body style="height:100%; overflow: auto;">
-
-    <div style="display: flex; align-items:stretch; min-height: 100%;">
-        <div id="SideMenu">
-            <div style="font-size: 20px; font-weight:bold; margin-bottom: 10px; border-bottom: solid 2px white;">
-                Menu
+<body style="height:100%; overflow: hidden;">
+    <div style="display: flex; align-items:stretch; height: 100%;">
+        <div id="SideMenu" onmousedown="SlideboxMouseDown(arguments[0])">
+            <div id="Slidebox" style="margin-top: 0px;">
+                <div style="font-size: 20px; font-weight:bold; margin-bottom: 10px; border-bottom: solid 2px white;">
+                    Menu
+                </div>
+                <ul>
+                    <li><a href="md/page1.html" target="ReaderFrame" draggable="false">概要</a></li>
+                    <li><a href="md/page2.html" target="ReaderFrame" draggable="false">サンプル</a></li>
+                    <li><a href="md/page3.html" target="ReaderFrame" draggable="false">表題の書き方</a></li>
+                    <li><a href="md/page4.html" target="ReaderFrame" draggable="false">リストの書き方</a></li>
+                </ul>
             </div>
-            <ul>
-                <li><a href="md/page1.html" target="ReaderFrame">概要</a></li>
-                <li><a href="" target="ReaderFrame">サンプル</a></li>
-                <li><a href="" target="ReaderFrame">表題の書き方</a></li>
-                <li><a href="" target="ReaderFrame">リストの書き方</a></li>
-            </ul>
         </div>
-        <div id="Content">
-        </div>
+
+        <div style=" overflow: auto; flex-grow:1">
+            <div id="Content">
+            </div>
+        <div>
     </div>
 
     <iframe id="iframe" name="ReaderFrame" style="display:none;">
@@ -56,9 +71,51 @@
         var parser = new MDParser();
         parser.ImageRoot = "img/";
 
+        var Slidebox = document.getElementById("Slidebox");
+        var MouseDowned = false;
+        var MouseDownedPos;
+        var MouseDownedBoxPos;
+
+        var SlideMin = 0;
+        var SlideMax = 1000;
+        var SlideStep = 20;
+
         window.addEventListener("message", function(e){
             document.getElementById("Content").innerHTML = parser.BuildHtml(e.data);
         });
+        
+        window.addEventListener("mousemove", function(e){
+            if(!MouseDowned) return;
+
+            if(MouseDownedPos == -9999){
+                 MouseDownedPos = e.pageY;
+                 Slidebox.classList.add("dragging");
+                 document.body.style["cursor"] = "s-resize";
+            }
+            Slidebox.style["margin-top"] = (MouseDownedBoxPos + e.pageY-MouseDownedPos) + "px";
+        });
+
+        window.addEventListener("mouseup", function(e){
+            MouseDowned = false;
+            Slidebox.classList.remove("dragging");
+
+            var y = Number(Slidebox.style["margin-top"].replace("px", ""));
+            if(y<SlideMin) y=SlideMin
+            if(y>SlideMax) y=SlideMax
+            y = y + SlideStep/2
+            y = Math.floor(y - y % SlideStep)
+            Slidebox.style["margin-top"] = y+"px";
+            document.body.style["cursor"] = "default";
+            return false;
+        });
+
+        function SlideboxMouseDown(e){
+            if(MouseDowned) return;
+
+            MouseDowned = true;
+            MouseDownedPos  = -9999
+            MouseDownedBoxPos = Number(Slidebox.style["margin-top"].replace("px", ""));
+        }
     </script>
 </body>
 </html>
