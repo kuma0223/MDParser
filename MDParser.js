@@ -234,8 +234,9 @@ var MDParser = function(){
             return me.buf[0];
         }
         this.html = function(tag, text, attr){
-            var ret = "<" + tag + " " + attr + ">"
-                + text + "</" + tag + ">";
+            var ret = "<" + tag;
+            if(attr.length > 0) ret += " " + attr
+            ret += ">" + text + "</" + tag + ">";
             return ret;
         }
         this.currentTag =function(){
