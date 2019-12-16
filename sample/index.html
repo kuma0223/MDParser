@@ -1,64 +1,67 @@
 ﻿<!DOCTYPE html>
-<html lang="ja" style="height:100%; overflow: hidden">
+<html lang="ja">
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta charset="UTF-8" />
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script src="../MDParser.js" type="text/javascript"></script>
+<script type="text/javascript">
+window.onload=function(){
+    document.body.innerHTML=new MDParser().BuildHtml(document.getElementById('Markdown').textContent)
+}
+</script>
+<script type="text/plain" id="Markdown">
+# 表題１
+## 表題２
+### 表題3
 
-    <script src="../MDParser.js" type="text/javascript"></script>
-    <link rel="stylesheet" type="text/css" href="../style.css" />
-    <style>
-        #SideMenu {
-            padding: 10px 24px;
-            width: 220px;
-            overflow: auto;
-            background-color: #44617b;
-            color: whitesmoke;
-            font-size: 16px;
-            border-right: 3px solid #4496d3;
-        }
+javascriptでマークダウンパーサを作成してみました。マニュアルなどを気軽に記述できないかな。
+これはサンプルです。
 
-            #SideMenu a {
-                color: whitesmoke;
-            }
+ここは通常の文章です。
 
-            #SideMenu ul {
-                margin: 0 20px;
-            }
+1. オーダーリスト
+1. オーダーリスト
+    - リスト
+        - リスト
+        - リスト
+    - リスト
 
-        #Content {
-            flex-grow: 1;
-            padding: 10px;
-        }
-    </style>
+---
+
+|テーブル|左寄せ|中央寄せ|右寄せ|
+|---|:---|:---:|---:|
+| 行1 | かきくけこ | あいうえお | 123 |
+| 行2 | けこ       | えお       | 45  |
+
+    スペース4つで<pre>文書になります。
+	タブ一つでもOK
+
+> >は引用です。
+> ここも引用です。
+>> >>とすると二重引用です。
+>> 何重でもできます。
+
+```c
+//コードブロックです。ハイライトは付きません。
+int a = 0;
+int b = a+1;
+```
+
+インラインコード表記は\`で囲み`int a=0;`ます。
+
+ここは*アクセント*です。
+ここは __強調__ です。
+ここは***アクセント+強調***です。
+*と _のどちらをも使えます。この辺のインライン要素は\\\*等でエスケープされます。
+
+ここは~~取り消し~~です。
+
+リンクです[Google](http://google.com)。別窓(_blank)になります。
+
+画像表示です。
+![画像表示のサンプル](icon.png)
+
+</script>
 </head>
-<body style="height:100%; overflow: auto;">
-
-    <div style="display: flex; align-items:stretch; min-height: 100%;">
-        <div id="SideMenu">
-            <div style="font-size: 20px; font-weight:bold; margin-bottom: 10px; border-bottom: solid 2px white;">
-                Menu
-            </div>
-            <ul>
-                <li><a href="md/page1.html" target="ReaderFrame">概要</a></li>
-                <li><a href="" target="ReaderFrame">サンプル</a></li>
-                <li><a href="" target="ReaderFrame">表題の書き方</a></li>
-                <li><a href="" target="ReaderFrame">リストの書き方</a></li>
-            </ul>
-        </div>
-        <div id="Content">
-        </div>
-    </div>
-
-    <iframe id="iframe" name="ReaderFrame" style="display:none;">
-    </iframe>
-    
-    <script>
-        var parser = new MDParser();
-        parser.ImageRoot = "img/";
-
-        window.addEventListener("message", function(e){
-            document.getElementById("Content").innerHTML = parser.BuildHtml(e.data);
-        });
-    </script>
-</body>
+<body></body>
 </html>
