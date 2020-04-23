@@ -3,6 +3,8 @@ var MDParser = function(){
     this.NewLine = "\n";
     //イメージパスのルート指定
     this.ImageRoot = "";
+    //previewによるHTML直接記述
+    this.EnablePreview = true;
 
     var MDParserObject = this;
     var me = this;
@@ -140,17 +142,30 @@ var MDParser = function(){
             }
             //コード
             if(parser_code.test(str)){
-                buf.popAll();
-                buf.push("pre", "");
-                buf.push("code", "", "class='code_" + parser_code.type(str) + "'");
-                let i=0;
-                //終了まで進める
-                while(true){
-                    str = NextLine();
-                    if(str==null || parser_code.test(str)) break;
-                    if(i>0) buf.add(me.NewLine);
-                    buf.add(str, false, true);
-                    i++;
+                let ctype = parser_code.type(str);
+                if(ctype == "preview" && me.EnablePreview){
+                    //HTML直接表示
+                    buf.popAll();
+                    //終了まで進める
+                    while(true){
+                        str = NextLine();
+                        if(str==null || parser_code.test(str)) break;
+                        buf.add(str, true, true);
+                    }
+                }else{
+                    buf.popAll();
+                    buf.push("pre", "");
+                    buf.push("code", "", "class='code_"+ctype+"'");
+                    let i=0;
+                    //終了まで進める
+                    while(true){
+                        str = NextLine();
+                        if(str==null || parser_code.test(str)) break;
+                        if(i>0) buf.add(me.NewLine);
+                        buf.add(str, false, true);
+                        i++;
+                    }
+                    buf.popAll();
                 }
                 continue;
             }
