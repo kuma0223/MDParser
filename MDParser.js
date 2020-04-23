@@ -3,6 +3,8 @@ var MDParser = function(){
     this.NewLine = "\n";
     //イメージパスのルート指定
     this.ImageRoot = "";
+    //previewによるHTML直接記述
+    this.EnablePreview = true;
 
     var MDParserObject = this;
     var me = this;
@@ -18,7 +20,7 @@ var MDParser = function(){
         var buf = new HtmlBuilder()
 
         while(true){
-            var str = NextLine()
+            let str = NextLine()
             if(str==null){
                 break;
             }
@@ -114,44 +116,62 @@ var MDParser = function(){
             }
             //引用
             if(parser_blockquote.test(str)){
-                var isblock = buf.currentTag() == "blockquote";
-                var indent = parser_blockquote.indent(str);
-                
-                if(!isblock){
-                    buf.popAll();
-                    buf.push("blockquote");
-                }else{
-                    buf.add("<br />", true, true);
-                }
-                for(var i=0; i<indent; i++){
-                    buf.push("span","", "class='blockquoteNest'");
-                }
-                buf.add(parser_blockquote.text(str));
-                for(var i=0; i<indent; i++){
-                    buf.pop();
+                buf.popAll();
+                //終了まで進める
+                let indent = 0;
+                while(true){
+                    let newindent = parser_blockquote.indent(str);
+                    if(newindent > indent){
+                        for(let i=indent; i<newindent; i++) buf.push("blockquote", "");
+                    } else if(newindent < indent){
+                        for(let i=newindent; i<indent; i++) buf.pop("blockquote", "");
+                    } else {
+                        buf.add("<br />", true, true);
+                    }
+                    indent = newindent;
+                    buf.add(parser_blockquote.text(str), false, true);
+
+                    str = NextLine();
+                    if(str == null || !parser_blockquote.test(str)){
+                        buf.popAll();
+                        Back();
+                        break;
+                    }
                 }
                 continue;
             }
             //コード
             if(parser_code.test(str)){
-                buf.popAll();
-                buf.push("pre", ""
-                    , "class='codeblock code_" + parser_code.type(str) + "'");
-                var i=0;
-                //終了まで進める
-                while(true){
-                    str = NextLine();
-                    if(str==null || parser_code.test(str)) break;
-                    if(i>0) buf.add(me.NewLine);
-                    buf.add(str, false, true);
-                    i++;
+                let ctype = parser_code.type(str);
+                if(ctype == "preview" && me.EnablePreview){
+                    //HTML直接表示
+                    buf.popAll();
+                    //終了まで進める
+                    while(true){
+                        str = NextLine();
+                        if(str==null || parser_code.test(str)) break;
+                        buf.add(str, true, true);
+                    }
+                }else{
+                    buf.popAll();
+                    buf.push("pre", "");
+                    buf.push("code", "", "class='code_"+ctype+"'");
+                    let i=0;
+                    //終了まで進める
+                    while(true){
+                        str = NextLine();
+                        if(str==null || parser_code.test(str)) break;
+                        if(i>0) buf.add(me.NewLine);
+                        buf.add(str, false, true);
+                        i++;
+                    }
+                    buf.popAll();
                 }
                 continue;
             }
 
             //一部タグの終了判定
-            if(buf.currentTag() == "li"
-            || buf.currentTag() == "blockquote") buf.popAll();
+            if(buf.currentTag() == "li") buf.popAll();
             
             //通常文書
             if(buf.currentTag()=="" && str.trim()!=""){
@@ -262,7 +282,7 @@ var MDParser = function(){
             [/ _{2}(.+?)_{2} /g, "<strong>$1</strong>"],
             [/\*(.+?)\*/g, "<em>$1</em>"],
             [/ _(.+?)_ /g, "<em>$1</em>"],
-            [/`(.+?)`/g, "<span class='inlinecode'>$1</span>"],
+            [/`(.+?)`/g, "<code>$1</code>"],
             [/~~(.+?)~~/, "<del>$1</del>"],
             [/!\[(.*?)\]\((.+?)\)/g, "<img src='" + MDParserObject.ImageRoot + "$2' alt='$1' />"],
             [/\[(.+?)\]\((.+?)\)/g, "<a href='$2' target='_blank'>$1</a>"],
