@@ -114,21 +114,27 @@ var MDParser = function(){
             }
             //引用
             if(parser_blockquote.test(str)){
-                var isblock = buf.currentTag() == "blockquote";
-                var indent = parser_blockquote.indent(str);
-                
-                if(!isblock){
-                    buf.popAll();
-                    buf.push("blockquote");
-                }else{
-                    buf.add("<br />", true, true);
-                }
-                for(var i=0; i<indent; i++){
-                    buf.push("span","", "class='blockquoteNest'");
-                }
-                buf.add(parser_blockquote.text(str));
-                for(var i=0; i<indent; i++){
-                    buf.pop();
+                buf.popAll();
+                //終了まで進める
+                let indent = 0;
+                while(true){
+                    let newindent = parser_blockquote.indent(str);
+                    if(newindent > indent){
+                        for(let i=indent; i<newindent; i++) buf.push("blockquote", "");
+                    } else if(newindent < indent){
+                        for(let i=newindent; i<indent; i++) buf.pop("blockquote", "");
+                    } else {
+                        buf.add("<br />", true, true);
+                    }
+                    indent = newindent;
+                    buf.add(parser_blockquote.text(str), false, true);
+
+                    str = NextLine();
+                    if(str == null || !parser_blockquote.test(str)){
+                        buf.popAll();
+                        Back();
+                        break;
+                    }
                 }
                 continue;
             }
@@ -150,8 +156,7 @@ var MDParser = function(){
             }
 
             //一部タグの終了判定
-            if(buf.currentTag() == "li"
-            || buf.currentTag() == "blockquote") buf.popAll();
+            if(buf.currentTag() == "li") buf.popAll();
             
             //通常文書
             if(buf.currentTag()=="" && str.trim()!=""){
