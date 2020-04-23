@@ -18,7 +18,7 @@ var MDParser = function(){
         var buf = new HtmlBuilder()
 
         while(true){
-            var str = NextLine()
+            let str = NextLine()
             if(str==null){
                 break;
             }
@@ -135,9 +135,9 @@ var MDParser = function(){
             //コード
             if(parser_code.test(str)){
                 buf.popAll();
-                buf.push("pre", ""
-                    , "class='codeblock code_" + parser_code.type(str) + "'");
-                var i=0;
+                buf.push("pre", "");
+                buf.push("code", "", "class='code_" + parser_code.type(str) + "'");
+                let i=0;
                 //終了まで進める
                 while(true){
                     str = NextLine();
@@ -262,7 +262,7 @@ var MDParser = function(){
             [/ _{2}(.+?)_{2} /g, "<strong>$1</strong>"],
             [/\*(.+?)\*/g, "<em>$1</em>"],
             [/ _(.+?)_ /g, "<em>$1</em>"],
-            [/`(.+?)`/g, "<span class='inlinecode'>$1</span>"],
+            [/`(.+?)`/g, "<code>$1</code>"],
             [/~~(.+?)~~/, "<del>$1</del>"],
             [/!\[(.*?)\]\((.+?)\)/g, "<img src='" + MDParserObject.ImageRoot + "$2' alt='$1' />"],
             [/\[(.+?)\]\((.+?)\)/g, "<a href='$2' target='_blank'>$1</a>"],
