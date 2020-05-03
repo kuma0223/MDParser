@@ -169,6 +169,12 @@ var MDParser = function(){
                 }
                 continue;
             }
+            //コメント
+            if(parser_comment.test(str)){
+                //終了まで進める(HTMLには含めない)
+                while(!parser_comment.testEnd(NextLine()));
+                continue;
+            }
 
             //一部タグの終了判定
             if(buf.currentTag() == "li") buf.popAll();
@@ -390,6 +396,16 @@ var MDParser = function(){
         }
         this.type = function(str){
             return str.replace(regex,"");
+        }
+    }
+    var parser_comment = new function(){
+        var regexS = /^\s*<!-{2,}\s*/
+        var regexE = /^\s*-{2,}>\s*/
+        this.test = function(str){
+            return regexS.test(str);
+        }
+        this.testEnd = function(str){
+            return regexE.test(str);
         }
     }
 }
