@@ -155,7 +155,7 @@ var MDParser = function(){
                 }else{
                     buf.popAll();
                     buf.push("pre", "");
-                    buf.push("code", "", "class='code_"+ctype+"'");
+	                buf.push("code", "", ctype!="" ? ("class='"+ctype+"'") : "");
                     let i=0;
                     //終了まで進める
                     while(true){
