@@ -134,7 +134,9 @@ var MDParser = function(){
                     str = NextLine();
                     if(str == null || !parser_blockquote.test(str)){
                         buf.popAll();
-                        Back();
+                        if(str!=null){
+                            Back();
+                        }
                         break;
                     }
                 }
